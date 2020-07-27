@@ -2,7 +2,7 @@ import os
 import requests
 import json
 
-from config import XRAY_CREATE_TEST_EXECUTION_URL, XRAY_AUTHENTICATION_URL
+from .config import XRAY_CREATE_TEST_EXECUTION_URL, XRAY_AUTHENTICATION_URL
 
 # Env variables
 XRAY_API_CLIENT_ID = os.environ['XRAY_API_CLIENT_ID']
