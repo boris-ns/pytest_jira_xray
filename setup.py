@@ -10,6 +10,8 @@ setup(
     packages=find_packages(),
     description='Plugin for PyTest that sends test reports to Xray (Jira).',
     install_requires=[
-        'requests>=2.24.0'
-    ]
+        'requests>=2.24.0',
+        'pytest>=5.4.3'
+    ],
+    entry_points={ 'pytest11': ['pytest_jira_xray = pytest_jira_xray.main'] }
 )
