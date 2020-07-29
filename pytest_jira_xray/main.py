@@ -13,6 +13,10 @@ XRAY_API_CLIENT_ID = os.environ['XRAY_API_CLIENT_ID']
 XRAY_API_CLIENT_SECRET = os.environ['XRAY_API_CLIENT_SECRET']
 
 
+# Mapping 'nodeid' from pytest's test to Jira's test id from marker
+test_keys = {}
+
+
 def main():
     token = get_authentication_token()
 
@@ -71,19 +75,6 @@ def get_authentication_token() -> str:
     return token
 
 
-# TODO: delete later
-# this is just for testing
-def pytest_report_header():
-    # if (pytest.config.getoption('silent')):
-    # if is_silent_mode:
-    return "HELOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
-
-
-# def pytest_configure(config) -> None:
-#     if config.getoption('silent'):
-#         print("SILENT MODE IS ACTIVATED")
-
-
 def pytest_addoption(parser) -> None:
     group = parser.getgroup('silent')
     group.addoption('--silent', action='store_true', help='Do not send the data to the Xray (Jira)')
@@ -92,19 +83,23 @@ def pytest_addoption(parser) -> None:
 def pytest_configure(config):
     # Register custom markers that our plugin uses
     config.addinivalue_line(
-        'markers', XRAY_MARKER_TEST_ID + '(): set Jira test ID for this test'
+        'markers', XRAY_MARKER_TEST_ID + '(id): set Jira test ID for this test'
     )
 
 
 def pytest_runtest_setup(item) -> None:
-    marker = item.get_closest_marker(XRAY_MARKER_TEST_ID)
+    global test_keys
 
+    marker = item.get_closest_marker(XRAY_MARKER_TEST_ID)
+    
     if marker is not None:
         test_id = marker.args[0]
-        print('Test ID is: ' + str(test_id))
+        test_keys[item.nodeid] = test_id
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
+    global test_keys
+    
     # Silent mode is activated so we wont send any data to the Xray    
     if config.getoption('silent'):
         print("[INFO] Silent mode activated: We won't send any data to the Xray (Jira)")
@@ -123,17 +118,15 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
 
     # TODO: prebaci ovu petlju u neku fju
     for test in passed_tests:
-        print(type(test))
-
-        print(test)
-
-        t = TestReportDTO('DIP-2', '2014-08-30T11:47:35+01:00', 
+        # TODO: sta ako kljuc u test_keys ne postoji
+        t = TestReportDTO(test_keys[test.nodeid], '2014-08-30T11:47:35+01:00', 
             '2014-08-30T11:47:35+01:00', test.outcome, test.duration
         )
         tests.append(t)
 
     for test in failed_tests:
-        t = TestReportDTO('DIP-3', '2014-08-30T11:47:35+01:00', 
+        # TODO: sta ako kljuc u test_keys ne postoji
+        t = TestReportDTO(test_keys[test.nodeid], '2014-08-30T11:47:35+01:00', 
             '2014-08-30T11:47:35+01:00', test.outcome, test.duration
         )
         tests.append(t)
