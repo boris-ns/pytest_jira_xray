@@ -5,13 +5,12 @@ import pytest
 from typing import List
 
 from pytest_jira_xray.api_paths import XRAY_CREATE_TEST_EXECUTION_URL, XRAY_AUTHENTICATION_URL
-from pytest_jira_xray.config import XRAY_MARKER_TEST_ID
+from pytest_jira_xray.config import XRAY_MARKER_TEST_ID, XRAY_CMD_LINE_ARG_TEST_PLAN, XRAY_CMD_LINE_ARG_SILENT
 from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO
 
 # Env variables
 XRAY_API_CLIENT_ID = os.environ['XRAY_API_CLIENT_ID']
 XRAY_API_CLIENT_SECRET = os.environ['XRAY_API_CLIENT_SECRET']
-
 
 # Mapping 'nodeid' from pytest's test to Jira's test id from marker
 test_keys = {}
@@ -77,7 +76,9 @@ def get_authentication_token() -> str:
 
 def pytest_addoption(parser) -> None:
     group = parser.getgroup('silent')
-    group.addoption('--silent', action='store_true', help='Do not send the data to the Xray (Jira)')
+    group.addoption('--' + XRAY_CMD_LINE_ARG_SILENT, action='store_true', help='Do not send the data to the Xray (Jira)')
+
+    parser.addoption('--' + XRAY_CMD_LINE_ARG_TEST_PLAN, action="store", default=None, help='Test plan ID from Jira')
 
 
 def pytest_configure(config):
@@ -101,8 +102,14 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     global test_keys
     
     # Silent mode is activated so we wont send any data to the Xray    
-    if config.getoption('silent'):
+    if config.getoption(XRAY_CMD_LINE_ARG_SILENT):
         print("[INFO] Silent mode activated: We won't send any data to the Xray (Jira)")
+        return
+
+    jira_test_plan_id = config.getoption(XRAY_CMD_LINE_ARG_TEST_PLAN)
+
+    if jira_test_plan_id is None:
+        print('[WARNING] In order to send the data to the Xray (Jira) you must pass Test Plan ID from Jira')
         return
 
     passed_tests = []
@@ -131,7 +138,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
         )
         tests.append(t)
         
-    test_execution_report = TestExecutionReportDTO('DIP-4', 
+    test_execution_report = TestExecutionReportDTO(jira_test_plan_id, 
         '2014-08-30T11:47:35+01:00', 
         '2014-08-30T11:47:35+01:00', 
         tests
@@ -153,10 +160,8 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     request_body = test_execution_report.as_json()
     response = requests.post(XRAY_CREATE_TEST_EXECUTION_URL, data=request_body, headers=headers)
 
-    print(response.status_code)
-    print(response.json())
-
     if (response.status_code == 200):
         print('[INFO] Reports have been sent to the Xray (Jira)')
     else:
         print('[ERROR] There was an error while sending the data to Xray (Jira)')
+        print('\t' + response.json()['error'])
