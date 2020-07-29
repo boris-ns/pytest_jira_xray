@@ -5,6 +5,7 @@ import pytest
 from typing import List
 
 from pytest_jira_xray.api_paths import XRAY_CREATE_TEST_EXECUTION_URL, XRAY_AUTHENTICATION_URL
+from pytest_jira_xray.config import XRAY_MARKER_TEST_ID
 from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO
 
 # Env variables
@@ -57,13 +58,11 @@ def main():
 
 
 def get_authentication_token() -> str:
+    headers = { 'Content-Type': 'application/json' }
+
     body = {
         'client_id': XRAY_API_CLIENT_ID, 
         'client_secret': XRAY_API_CLIENT_SECRET
-    }
-    
-    headers = {
-        'Content-Type': 'application/json'
     }
     
     response = requests.post(XRAY_AUTHENTICATION_URL, body, headers)
@@ -90,19 +89,44 @@ def pytest_addoption(parser) -> None:
     group.addoption('--silent', action='store_true', help='Do not send the data to the Xray (Jira)')
 
 
+def pytest_configure(config):
+    # Register custom markers that our plugin uses
+    config.addinivalue_line(
+        'markers', XRAY_MARKER_TEST_ID + '(): set Jira test ID for this test'
+    )
+
+
+def pytest_runtest_setup(item) -> None:
+    marker = item.get_closest_marker(XRAY_MARKER_TEST_ID)
+
+    if marker is not None:
+        test_id = marker.args[0]
+        print('Test ID is: ' + str(test_id))
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     # Silent mode is activated so we wont send any data to the Xray    
     if config.getoption('silent'):
-        print("Silent mode activated: We won't send any data to the Xray (Jira)")
+        print("[INFO] Silent mode activated: We won't send any data to the Xray (Jira)")
         return
-    
-    passed_tests = terminalreporter.stats['passed']
-    failed_tests = terminalreporter.stats['failed']
-    tests: List[TestReportDTO] = []
 
+    passed_tests = []
+    failed_tests = []
+
+    try:
+        passed_tests = terminalreporter.stats['passed']
+        failed_tests = terminalreporter.stats['failed']
+    except KeyError:
+        pass
+
+    tests: List[TestReportDTO] = []
 
     # TODO: prebaci ovu petlju u neku fju
     for test in passed_tests:
+        print(type(test))
+
+        print(test)
+
         t = TestReportDTO('DIP-2', '2014-08-30T11:47:35+01:00', 
             '2014-08-30T11:47:35+01:00', test.outcome, test.duration
         )
