@@ -26,8 +26,8 @@ class TestReportDTO:
 class TestExecutionReportDTO:
     """
     Example of test execution report in JSON format:
-
-    "info": {
+    {
+        "info": {
             "summary": "Execution of automated tests for release v1.3",
             "description": "This execution is automatically created when importing execution results from an external source",
             "revision": "1.0.42134",
@@ -40,15 +40,19 @@ class TestExecutionReportDTO:
     } 
     """
     
-    def __init__(self, test_plan_key, start_date, finish_date, tests):
+    def __init__(self, test_plan_key: str, start_date: str, finish_date: str, tests: List[TestReportDTO]):
         self.info = {}
-        self.info.summary = 'Execution of automated tests from PyTest plugin'
-        self.info.description = 'This execution is automatically created when importing execution results from an external source'
-        self.info.startDate = start_date
-        self.info.finishDate = finish_date
-        self.info.testPlanKey = test_plan_key
-        self.info.testEnvironments = []
-        self.info.tests = tests
+        self.info['summary'] = 'Execution of automated tests from PyTest plugin'
+        self.info['description'] = 'This execution is automatically created when importing execution results from an external source'
+        self.info['startDate'] = start_date
+        self.info['finishDate'] = finish_date
+        self.info['testPlanKey'] = test_plan_key
+        self.info['testEnvironments'] = []
+        self.tests = tests
 
     def as_json(self):
-        return json.dumps(self.__dict__)
+        # TODO-REFACTOR: refactor this
+        obj = {}
+        obj['info'] = self.info
+        obj['tests'] = [t.__dict__ for t in self.tests] 
+        return json.dumps(obj)

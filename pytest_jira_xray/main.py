@@ -2,6 +2,7 @@ import os
 import requests
 import json
 import pytest
+from typing import List
 
 from pytest_jira_xray.api_paths import XRAY_CREATE_TEST_EXECUTION_URL, XRAY_AUTHENTICATION_URL
 from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO
@@ -97,24 +98,48 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     
     passed_tests = terminalreporter.stats['passed']
     failed_tests = terminalreporter.stats['failed']
-    tests = []
+    tests: List[TestReportDTO] = []
 
-    print(test.as_json())
 
     # TODO: prebaci ovu petlju u neku fju
     for test in passed_tests:
-        t = TestReportDTO('KEY-TODO', '2014-08-30T11:47:35+01:00', 
+        t = TestReportDTO('DIP-2', '2014-08-30T11:47:35+01:00', 
             '2014-08-30T11:47:35+01:00', test.outcome, test.duration
         )
-        tests.append(t.as_json())
+        tests.append(t)
 
     for test in failed_tests:
-        t = TestReportDTO('KEY-TODO', '2014-08-30T11:47:35+01:00', 
+        t = TestReportDTO('DIP-3', '2014-08-30T11:47:35+01:00', 
             '2014-08-30T11:47:35+01:00', test.outcome, test.duration
         )
         tests.append(t)
         
+    test_execution_report = TestExecutionReportDTO('DIP-4', 
+        '2014-08-30T11:47:35+01:00', 
+        '2014-08-30T11:47:35+01:00', 
+        tests
+    )
 
-    test_execution_report = TestExecutionReportDTO('DIP-4', '2014-08-30T11:47:35+01:00', '2014-08-30T11:47:35+01:00', tests)
+    token = get_authentication_token()
 
-    print('Reports has been sent to the Xray (Jira)')
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+    }
+
+    # TODO: treba proveriti kakav ce biti JSON za TestExecutionReportDTO
+    # pretpostavljam da i to treba srediti na neki nacin da bude lepo formatirano
+    print(test_execution_report.as_json())
+
+    # tests lista kao da se 2x formatira u string tj. json format
+
+    request_body = test_execution_report.as_json()
+    response = requests.post(XRAY_CREATE_TEST_EXECUTION_URL, data=request_body, headers=headers)
+
+    print(response.status_code)
+    print(response.json())
+
+    if (response.status_code == 200):
+        print('[INFO] Reports have been sent to the Xray (Jira)')
+    else:
+        print('[ERROR] There was an error while sending the data to Xray (Jira)')
