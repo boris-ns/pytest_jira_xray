@@ -9,8 +9,8 @@ from pytest_jira_xray.config import XRAY_MARKER_TEST_ID, XRAY_CMD_LINE_ARG_TEST_
 from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO
 
 # Env variables
-XRAY_API_CLIENT_ID = os.environ['XRAY_API_CLIENT_ID']
-XRAY_API_CLIENT_SECRET = os.environ['XRAY_API_CLIENT_SECRET']
+XRAY_API_CLIENT_ID = os.environ.get('XRAY_API_CLIENT_ID')
+XRAY_API_CLIENT_SECRET = os.environ.get('XRAY_API_CLIENT_SECRET')
 
 # Mapping 'nodeid' from pytest's test to Jira's test id from marker
 test_keys = {}
@@ -100,6 +100,11 @@ def pytest_runtest_setup(item) -> None:
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     global test_keys
+
+    # Check if required environment variables exist
+    if XRAY_API_CLIENT_ID is None or XRAY_API_CLIENT_SECRET is None:
+        print('[ERROR] Xray API client ID or SECRET are not set as environment variables')
+        return
     
     # Silent mode is activated so we wont send any data to the Xray    
     if config.getoption(XRAY_CMD_LINE_ARG_SILENT):
