@@ -99,8 +99,6 @@ def pytest_runtest_setup(item) -> None:
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
-    global test_keys
-
     # Check if required environment variables exist
     if XRAY_API_CLIENT_ID is None or XRAY_API_CLIENT_SECRET is None:
         print('[ERROR] Xray API client ID or SECRET are not set as environment variables')
@@ -126,6 +124,25 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     except KeyError:
         pass
 
+    
+    # TODO: treba razresiti parametrizovane testove
+    # ako ih ima u obe liste treba ukloniti one iz passed_tests
+    # u suprotnom ostaviti kako treba, iako ce biti duplikata
+    # jira moze da izbori sa tim jer ce smatrati prvi test
+    # onim koji treba da objavi na kartici
+    # [x for x in myList if x.n == 30]
+
+    to_delete = []
+    for i in range(len(passed_tests)):
+        found_tests = [x for x in failed_tests if test_keys[x.nodeid] == test_keys[passed_tests[i].nodeid]]
+
+        if len(found_tests) > 0:
+            to_delete.append(i)
+
+    for i in sorted(to_delete, reverse=True):
+        del passed_tests[i]
+
+
     tests: List[TestReportDTO] = []
 
     # TODO: prebaci ovu petlju u neku fju
@@ -142,12 +159,15 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
             '2014-08-30T11:47:35+01:00', test.outcome, test.duration
         )
         tests.append(t)
-        
+
     test_execution_report = TestExecutionReportDTO(jira_test_plan_id, 
         '2014-08-30T11:47:35+01:00', 
         '2014-08-30T11:47:35+01:00', 
         tests
     )
+
+    print(len(passed_tests))
+    print(len(failed_tests))
 
     token = get_authentication_token()
 
@@ -155,12 +175,6 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
     }
-
-    # TODO: treba proveriti kakav ce biti JSON za TestExecutionReportDTO
-    # pretpostavljam da i to treba srediti na neki nacin da bude lepo formatirano
-    print(test_execution_report.as_json())
-
-    # tests lista kao da se 2x formatira u string tj. json format
 
     request_body = test_execution_report.as_json()
     response = requests.post(XRAY_CREATE_TEST_EXECUTION_URL, data=request_body, headers=headers)
