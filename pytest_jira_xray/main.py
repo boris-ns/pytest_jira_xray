@@ -124,6 +124,9 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     except KeyError:
         pass
 
+    # Filter out tests that don't have Jira Test ID
+    passed_tests = [t for t in passed_tests if t.nodeid in test_keys]
+    failed_tests = [t for t in failed_tests if t.nodeid in test_keys]
     
     # TODO: treba razresiti parametrizovane testove
     # ako ih ima u obe liste treba ukloniti one iz passed_tests
