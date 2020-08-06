@@ -98,6 +98,17 @@ def pytest_runtest_setup(item) -> None:
         test_keys[item.nodeid] = test_id
 
 
+def send_test_execution_to_jira(test_execution_report, token):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+    }
+
+    request_body = test_execution_report.as_json()
+    response = requests.post(XRAY_CREATE_TEST_EXECUTION_URL, data=request_body, headers=headers)
+    return response
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     # Check if required environment variables exist
     if XRAY_API_CLIENT_ID is None or XRAY_API_CLIENT_SECRET is None:
@@ -169,21 +180,12 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
         tests
     )
 
-    print(len(passed_tests))
-    print(len(failed_tests))
-
     token = get_authentication_token()
-
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-    }
-
-    request_body = test_execution_report.as_json()
-    response = requests.post(XRAY_CREATE_TEST_EXECUTION_URL, data=request_body, headers=headers)
+    response = send_test_execution_to_jira(test_execution_report, token)
 
     if (response.status_code == 200):
         print('[INFO] Reports have been sent to the Xray (Jira)')
+        print('\tNew Test Execution with ID ' + response.json()['key'] + ' has been created.')
     else:
         print('[ERROR] There was an error while sending the data to Xray (Jira)')
         print('\t' + response.json()['error'])
