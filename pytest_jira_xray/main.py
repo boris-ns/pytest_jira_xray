@@ -55,6 +55,11 @@ def pytest_runtest_setup(item) -> None:
 
 
 def send_test_execution_to_jira(test_execution_report, token):
+    if 'error' in token:
+        print('[ERROR] There was an error while authenticating user.')
+        print('\t' + token['error'])
+        return None
+
     headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
@@ -138,6 +143,9 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
 
     token = get_authentication_token()
     response = send_test_execution_to_jira(test_execution_report, token)
+
+    if response is None:
+        return
 
     if (response.status_code == 200):
         print('[INFO] Reports have been sent to the Xray (Jira)')
