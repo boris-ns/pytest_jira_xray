@@ -5,12 +5,12 @@ import pytest
 from typing import List
 
 from pytest_jira_xray.api_paths import XRAY_CREATE_TEST_EXECUTION_URL, XRAY_AUTHENTICATION_URL
-from pytest_jira_xray.config import XRAY_MARKER_TEST_ID, XRAY_CMD_LINE_ARG_TEST_PLAN, XRAY_CMD_LINE_ARG_SILENT
+from pytest_jira_xray.config import XRAY_MARKER_TEST_ID, XRAY_CMD_LINE_ARG_TEST_PLAN, XRAY_CMD_LINE_ARG_SILENT, ENV_XRAY_API_CLIENT_ID, ENV_XRAY_API_CLIENT_SECRET
 from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO
 
 # Env variables
-XRAY_API_CLIENT_ID = os.environ.get('XRAY_API_CLIENT_ID')
-XRAY_API_CLIENT_SECRET = os.environ.get('XRAY_API_CLIENT_SECRET')
+XRAY_API_CLIENT_ID = os.environ.get(ENV_XRAY_API_CLIENT_ID)
+XRAY_API_CLIENT_SECRET = os.environ.get(ENV_XRAY_API_CLIENT_SECRET)
 
 # Mapping 'nodeid' from pytest's test to Jira's test id from marker
 test_keys = {}
