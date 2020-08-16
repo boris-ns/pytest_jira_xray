@@ -40,10 +40,10 @@ class TestExecutionReportDTO:
     } 
     """
     
-    def __init__(self, test_plan_key: str, start_date: str, finish_date: str, tests: List[TestReportDTO]):
+    def __init__(self, test_plan_key: str, description: str, start_date: str, finish_date: str, tests: List[TestReportDTO]):
         self.info = {}
         self.info['summary'] = 'Execution of automated tests from PyTest plugin'
-        self.info['description'] = 'This execution is automatically created when importing execution results from an external source'
+        self.info['description'] = description
         self.info['startDate'] = start_date
         self.info['finishDate'] = finish_date
         self.info['testPlanKey'] = test_plan_key

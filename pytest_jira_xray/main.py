@@ -70,6 +70,14 @@ def send_test_execution_to_jira(test_execution_report, token):
     return response
 
 
+def create_report_description(tests):
+    report_description = 'Test execution report:\n'
+
+    for test in tests:
+        report_description += test.nodeid + '..........' + test.outcome + '\n'
+
+    return report_description
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     # Check if required environment variables exist
     if XRAY_API_CLIENT_ID is None or XRAY_API_CLIENT_SECRET is None:
@@ -100,6 +108,9 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     passed_tests = [t for t in passed_tests if t.nodeid in test_keys]
     failed_tests = [t for t in failed_tests if t.nodeid in test_keys]
     
+    # Create test execution description
+    report_description = create_report_description(passed_tests + failed_tests)
+
     # TODO: treba razresiti parametrizovane testove
     # ako ih ima u obe liste treba ukloniti one iz passed_tests
     # u suprotnom ostaviti kako treba, iako ce biti duplikata
@@ -136,6 +147,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
         tests.append(t)
 
     test_execution_report = TestExecutionReportDTO(jira_test_plan_id, 
+        report_description,
         '2014-08-30T11:47:35+01:00', 
         '2014-08-30T11:47:35+01:00', 
         tests
