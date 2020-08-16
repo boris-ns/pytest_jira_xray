@@ -78,6 +78,20 @@ def create_report_description(tests):
 
     return report_description
 
+
+def create_test_report_dto_list(tests) -> List[TestReportDTO]:
+    testsDto: List[TestReportDTO] = []
+
+    for test in tests:
+        # TODO: sta ako kljuc u test_keys ne postoji
+        t = TestReportDTO(test_keys[test.nodeid], '2014-08-30T11:47:35+01:00', 
+            '2014-08-30T11:47:35+01:00', test.outcome, test.duration
+        )
+        testsDto.append(t)
+
+    return testsDto
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     # Check if required environment variables exist
     if XRAY_API_CLIENT_ID is None or XRAY_API_CLIENT_SECRET is None:
@@ -100,6 +114,10 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
 
     try:
         passed_tests = terminalreporter.stats['passed']
+    except KeyError:
+        pass
+
+    try:
         failed_tests = terminalreporter.stats['failed']
     except KeyError:
         pass
@@ -129,22 +147,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
         del passed_tests[i]
 
 
-    tests: List[TestReportDTO] = []
-
-    # TODO: prebaci ovu petlju u neku fju
-    for test in passed_tests:
-        # TODO: sta ako kljuc u test_keys ne postoji
-        t = TestReportDTO(test_keys[test.nodeid], '2014-08-30T11:47:35+01:00', 
-            '2014-08-30T11:47:35+01:00', test.outcome, test.duration
-        )
-        tests.append(t)
-
-    for test in failed_tests:
-        # TODO: sta ako kljuc u test_keys ne postoji
-        t = TestReportDTO(test_keys[test.nodeid], '2014-08-30T11:47:35+01:00', 
-            '2014-08-30T11:47:35+01:00', test.outcome, test.duration
-        )
-        tests.append(t)
+    tests: List[TestReportDTO] = create_test_report_dto_list(passed_tests + failed_tests)
 
     test_execution_report = TestExecutionReportDTO(jira_test_plan_id, 
         report_description,
