@@ -54,23 +54,30 @@ def pytest_configure(config):
 
 def pytest_runtest_setup(item) -> None:
     global test_keys
+    global tests_datetimes
 
     marker = item.get_closest_marker(XRAY_MARKER_TEST_ID)
     
-    if marker is not None:
-        test_id = marker.args[0]
-        test_keys[item.nodeid] = test_id
+    if marker is None:
+        return
 
+    test_id = marker.args[0]
+    test_keys[item.nodeid] = test_id
 
-def pytest_runtest_logstart(nodeid, location) -> None:
-    if nodeid not in tests_datetimes:
+    if test_id not in tests_datetimes:
         interval = TestProcessInterval()
         interval.start = get_current_datetime()
-        tests_datetimes[nodeid] = interval
+        tests_datetimes[test_id] = interval
 
 
 def pytest_runtest_logfinish(nodeid, location) -> None:
-    tests_datetimes[nodeid].end = get_current_datetime()
+    global tests_datetimes
+    
+    if nodeid not in test_keys:
+        return
+        
+    test_key = test_keys[nodeid]
+    tests_datetimes[test_key].end = get_current_datetime()
 
 
 def send_test_execution_to_jira(test_execution_report, token):
@@ -111,11 +118,14 @@ def create_test_report_dto_list(tests) -> List[TestReportDTO]:
     testsDto: List[TestReportDTO] = []
 
     for test in tests:
-        # TODO: sta ako kljuc u test_keys ne postoji
-        start_time = tests_datetimes[test.nodeid].start
-        end_time = tests_datetimes[test.nodeid].end
+        if test.nodeid not in test_keys:
+            continue
 
-        t = TestReportDTO(test_keys[test.nodeid], start_time, end_time, 
+        test_key = test_keys[test.nodeid]
+        start_time = tests_datetimes[test_key].start
+        end_time = tests_datetimes[test_key].end
+
+        t = TestReportDTO(test_key, start_time, end_time, 
             test.outcome, create_test_description(test)
         )
         testsDto.append(t)
