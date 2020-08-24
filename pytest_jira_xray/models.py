@@ -9,16 +9,16 @@ class TestReportDTO:
         "start": "2014-08-30T11:47:35+01:00",
         "finish": "2014-08-30T11:50:56+01:00",
         "comment": "Successful execution",
-        "status": "FAILED"
+        "status": "SUCCESS"
     } 
     """
 
-    def __init__(self, test_key, start, finish, status, duration):
+    def __init__(self, test_key, start, finish, status, comment):
         self.testKey = test_key
         self.start = start
         self.finish = finish
         self.status = status
-        self.comment = 'This is automated test execution report. This test was active for ' + str(duration) + 'seconds'
+        self.comment = comment
 
     def as_json(self):
         return json.dumps(self.__dict__)
@@ -42,7 +42,7 @@ class TestExecutionReportDTO:
     
     def __init__(self, test_plan_key: str, description: str, start_date: str, finish_date: str, tests: List[TestReportDTO]):
         self.info = {}
-        self.info['summary'] = 'Execution of automated tests from PyTest plugin'
+        self.info['summary'] = 'Automated Test Execution for test plan ' + test_plan_key
         self.info['description'] = description
         self.info['startDate'] = start_date
         self.info['finishDate'] = finish_date
@@ -51,7 +51,6 @@ class TestExecutionReportDTO:
         self.tests = tests
 
     def as_json(self):
-        # TODO-REFACTOR: refactor this
         obj = {}
         obj['info'] = self.info
         obj['tests'] = [t.__dict__ for t in self.tests] 

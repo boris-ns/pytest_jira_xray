@@ -65,12 +65,27 @@ def send_test_execution_to_jira(test_execution_report, token):
         'Authorization': 'Bearer ' + token
     }
 
+    # r = requests.get(XRAY_GET_TESTS_FROM_TEST_PLAN_URL, headers=headers)
+    # print(r.status_code)
+    # print(r.json())
+
+    # return None
+
     request_body = test_execution_report.as_json()
     response = requests.post(XRAY_CREATE_TEST_EXECUTION_URL, data=request_body, headers=headers)
     return response
 
 
-def create_report_description(tests):
+def create_test_description(test) -> str:
+    comment = 'This is automated test execution report.\nThis test was active for ' + str(test.duration) + ' seconds.\n'
+
+    if test.longrepr != None:
+        comment += '\nERROR LOG:\n' + str(test.longrepr)
+
+    return comment
+
+
+def create_report_description(tests) -> str:
     report_description = 'Test execution report:\n'
 
     for test in tests:
@@ -85,7 +100,7 @@ def create_test_report_dto_list(tests) -> List[TestReportDTO]:
     for test in tests:
         # TODO: sta ako kljuc u test_keys ne postoji
         t = TestReportDTO(test_keys[test.nodeid], '2014-08-30T11:47:35+01:00', 
-            '2014-08-30T11:47:35+01:00', test.outcome, test.duration
+            '2014-08-30T11:47:35+01:00', test.outcome, create_test_description(test)
         )
         testsDto.append(t)
 
