@@ -15,6 +15,11 @@ XRAY_API_CLIENT_SECRET = os.environ.get(ENV_XRAY_API_CLIENT_SECRET)
 
 # Mapping 'nodeid' from pytest's test to Jira's test id from marker
 test_keys = {}
+
+# Dictionary that contains information about start and end time for each test
+tests_datetimes = {}
+
+# Testing process start time
 start_time = get_current_datetime()
 start_time_normal = get_current_datetime_normal()
 
@@ -82,8 +87,8 @@ def create_test_description(test) -> str:
     return comment
 
 
-def create_report_description(tests) -> str:
-    report_description = 'Test execution report:\n\nTesting started at: ' + start_time_normal + '\nTesting ended at: ' + get_current_datetime_normal() + '\n\n'
+def create_report_description(tests, end_time) -> str:
+    report_description = 'Test execution report:\n\nTesting started at: ' + start_time_normal + '\nTesting ended at: ' + end_time + '\n\n'
 
     for test in tests:
         report_description += test.nodeid + '..........' + test.outcome + '\n'
@@ -92,12 +97,12 @@ def create_report_description(tests) -> str:
 
 
 def create_test_report_dto_list(tests) -> List[TestReportDTO]:
-    end_time = get_current_datetime()
     testsDto: List[TestReportDTO] = []
 
     for test in tests:
         # TODO: sta ako kljuc u test_keys ne postoji
-        t = TestReportDTO(test_keys[test.nodeid], start_time, end_time, 
+        # TODO: ubaci prave datume
+        t = TestReportDTO(test_keys[test.nodeid], start_time, start_time, 
             test.outcome, create_test_description(test)
         )
         testsDto.append(t)
@@ -122,6 +127,8 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
         print('[WARNING] In order to send the data to the Xray (Jira) you must pass Test Plan ID from Jira')
         return
 
+    end_time = get_current_datetime()
+    end_time_normal = get_current_datetime_normal()
     passed_tests = []
     failed_tests = []
 
@@ -140,7 +147,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     failed_tests = [t for t in failed_tests if t.nodeid in test_keys]
 
     # Create test execution description
-    report_description = create_report_description(passed_tests + failed_tests)
+    report_description = create_report_description(passed_tests + failed_tests, end_time_normal)
 
     # TODO: treba razresiti parametrizovane testove
     # ako ih ima u obe liste treba ukloniti one iz passed_tests
@@ -164,8 +171,8 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
 
     test_execution_report = TestExecutionReportDTO(jira_test_plan_id, 
         report_description,
-        '2014-08-30T11:47:35+01:00', 
-        '2014-08-30T11:47:35+01:00', 
+        start_time, 
+        end_time, 
         tests
     )
 
