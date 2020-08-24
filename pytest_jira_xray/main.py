@@ -6,7 +6,7 @@ from typing import List
 
 from pytest_jira_xray.api_paths import XRAY_CREATE_TEST_EXECUTION_URL, XRAY_AUTHENTICATION_URL
 from pytest_jira_xray.config import XRAY_MARKER_TEST_ID, XRAY_CMD_LINE_ARG_TEST_PLAN, XRAY_CMD_LINE_ARG_SILENT, ENV_XRAY_API_CLIENT_ID, ENV_XRAY_API_CLIENT_SECRET
-from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO
+from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO, TestProcessInterval
 from pytest_jira_xray.utils import get_current_datetime, get_current_datetime_normal
 
 # Env variables
@@ -62,6 +62,17 @@ def pytest_runtest_setup(item) -> None:
         test_keys[item.nodeid] = test_id
 
 
+def pytest_runtest_logstart(nodeid, location) -> None:
+    if nodeid not in tests_datetimes:
+        interval = TestProcessInterval()
+        interval.start = get_current_datetime()
+        tests_datetimes[nodeid] = interval
+
+
+def pytest_runtest_logfinish(nodeid, location) -> None:
+    tests_datetimes[nodeid].end = get_current_datetime()
+
+
 def send_test_execution_to_jira(test_execution_report, token):
     if 'error' in token:
         print('[ERROR] There was an error while authenticating user.')
@@ -101,8 +112,10 @@ def create_test_report_dto_list(tests) -> List[TestReportDTO]:
 
     for test in tests:
         # TODO: sta ako kljuc u test_keys ne postoji
-        # TODO: ubaci prave datume
-        t = TestReportDTO(test_keys[test.nodeid], start_time, start_time, 
+        start_time = tests_datetimes[test.nodeid].start
+        end_time = tests_datetimes[test.nodeid].end
+
+        t = TestReportDTO(test_keys[test.nodeid], start_time, end_time, 
             test.outcome, create_test_description(test)
         )
         testsDto.append(t)

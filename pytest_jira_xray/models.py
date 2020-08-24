@@ -55,3 +55,8 @@ class TestExecutionReportDTO:
         obj['info'] = self.info
         obj['tests'] = [t.__dict__ for t in self.tests] 
         return json.dumps(obj)
+
+class TestProcessInterval:
+    def __init__(self):
+        self.start = None
+        self.end = None
