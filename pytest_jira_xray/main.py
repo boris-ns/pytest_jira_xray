@@ -7,6 +7,7 @@ from typing import List
 from pytest_jira_xray.api_paths import XRAY_CREATE_TEST_EXECUTION_URL, XRAY_AUTHENTICATION_URL
 from pytest_jira_xray.config import XRAY_MARKER_TEST_ID, XRAY_CMD_LINE_ARG_TEST_PLAN, XRAY_CMD_LINE_ARG_SILENT, ENV_XRAY_API_CLIENT_ID, ENV_XRAY_API_CLIENT_SECRET
 from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO
+from pytest_jira_xray.utils import get_current_datetime, get_current_datetime_normal
 
 # Env variables
 XRAY_API_CLIENT_ID = os.environ.get(ENV_XRAY_API_CLIENT_ID)
@@ -14,6 +15,8 @@ XRAY_API_CLIENT_SECRET = os.environ.get(ENV_XRAY_API_CLIENT_SECRET)
 
 # Mapping 'nodeid' from pytest's test to Jira's test id from marker
 test_keys = {}
+start_time = get_current_datetime()
+start_time_normal = get_current_datetime_normal()
 
 
 def get_authentication_token() -> str:
@@ -65,12 +68,6 @@ def send_test_execution_to_jira(test_execution_report, token):
         'Authorization': 'Bearer ' + token
     }
 
-    # r = requests.get(XRAY_GET_TESTS_FROM_TEST_PLAN_URL, headers=headers)
-    # print(r.status_code)
-    # print(r.json())
-
-    # return None
-
     request_body = test_execution_report.as_json()
     response = requests.post(XRAY_CREATE_TEST_EXECUTION_URL, data=request_body, headers=headers)
     return response
@@ -86,7 +83,7 @@ def create_test_description(test) -> str:
 
 
 def create_report_description(tests) -> str:
-    report_description = 'Test execution report:\n'
+    report_description = 'Test execution report:\n\nTesting started at: ' + start_time_normal + '\nTesting ended at: ' + get_current_datetime_normal() + '\n\n'
 
     for test in tests:
         report_description += test.nodeid + '..........' + test.outcome + '\n'
@@ -95,12 +92,13 @@ def create_report_description(tests) -> str:
 
 
 def create_test_report_dto_list(tests) -> List[TestReportDTO]:
+    end_time = get_current_datetime()
     testsDto: List[TestReportDTO] = []
 
     for test in tests:
         # TODO: sta ako kljuc u test_keys ne postoji
-        t = TestReportDTO(test_keys[test.nodeid], '2014-08-30T11:47:35+01:00', 
-            '2014-08-30T11:47:35+01:00', test.outcome, create_test_description(test)
+        t = TestReportDTO(test_keys[test.nodeid], start_time, end_time, 
+            test.outcome, create_test_description(test)
         )
         testsDto.append(t)
 
@@ -140,7 +138,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
     # Filter out tests that don't have Jira Test ID
     passed_tests = [t for t in passed_tests if t.nodeid in test_keys]
     failed_tests = [t for t in failed_tests if t.nodeid in test_keys]
-    
+
     # Create test execution description
     report_description = create_report_description(passed_tests + failed_tests)
 
