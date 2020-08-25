@@ -56,7 +56,9 @@ class TestExecutionReportDTO:
         obj['tests'] = [t.__dict__ for t in self.tests] 
         return json.dumps(obj)
 
-class TestProcessInterval:
+class TestInfo:
     def __init__(self):
         self.start = None
         self.end = None
+        self.duration = 0
+        self.stack_trace = ''

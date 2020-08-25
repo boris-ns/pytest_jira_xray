@@ -6,7 +6,7 @@ from typing import List
 
 from pytest_jira_xray.api_paths import XRAY_CREATE_TEST_EXECUTION_URL, XRAY_AUTHENTICATION_URL
 from pytest_jira_xray.config import XRAY_MARKER_TEST_ID, XRAY_CMD_LINE_ARG_TEST_PLAN, XRAY_CMD_LINE_ARG_SILENT, ENV_XRAY_API_CLIENT_ID, ENV_XRAY_API_CLIENT_SECRET
-from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO, TestProcessInterval
+from pytest_jira_xray.models import TestReportDTO, TestExecutionReportDTO, TestInfo
 from pytest_jira_xray.utils import get_current_datetime, get_current_datetime_normal
 
 # Env variables
@@ -17,7 +17,7 @@ XRAY_API_CLIENT_SECRET = os.environ.get(ENV_XRAY_API_CLIENT_SECRET)
 test_keys = {}
 
 # Dictionary that contains information about start and end time for each test
-tests_datetimes = {}
+tests_info = {}
 
 # Testing process start time
 start_time = get_current_datetime()
@@ -54,7 +54,7 @@ def pytest_configure(config):
 
 def pytest_runtest_setup(item) -> None:
     global test_keys
-    global tests_datetimes
+    global tests_info
 
     marker = item.get_closest_marker(XRAY_MARKER_TEST_ID)
     
@@ -64,20 +64,20 @@ def pytest_runtest_setup(item) -> None:
     test_id = marker.args[0]
     test_keys[item.nodeid] = test_id
 
-    if test_id not in tests_datetimes:
-        interval = TestProcessInterval()
+    if test_id not in tests_info:
+        interval = TestInfo()
         interval.start = get_current_datetime()
-        tests_datetimes[test_id] = interval
+        tests_info[test_id] = interval
 
 
 def pytest_runtest_logfinish(nodeid, location) -> None:
-    global tests_datetimes
+    global tests_info
     
     if nodeid not in test_keys:
         return
         
     test_key = test_keys[nodeid]
-    tests_datetimes[test_key].end = get_current_datetime()
+    tests_info[test_key].end = get_current_datetime()
 
 
 def send_test_execution_to_jira(test_execution_report, token):
@@ -97,10 +97,11 @@ def send_test_execution_to_jira(test_execution_report, token):
 
 
 def create_test_description(test) -> str:
-    comment = 'This is automated test execution report.\nThis test was active for ' + str(test.duration) + ' seconds.\n'
+    test_info = tests_info[test_keys[test.nodeid]]
+    comment = 'This is automated test execution report.\nThis test was active for ' + str(test_info.duration) + ' seconds.\n'
 
     if test.longrepr != None:
-        comment += '\nERROR LOG:\n' + str(test.longrepr)
+        comment += '\nERROR LOG:\n' + test_info.stack_trace
 
     return comment
 
@@ -122,8 +123,8 @@ def create_test_report_dto_list(tests) -> List[TestReportDTO]:
             continue
 
         test_key = test_keys[test.nodeid]
-        start_time = tests_datetimes[test_key].start
-        end_time = tests_datetimes[test_key].end
+        start_time = tests_info[test_key].start
+        end_time = tests_info[test_key].end
 
         t = TestReportDTO(test_key, start_time, end_time, 
             test.outcome, create_test_description(test)
@@ -171,6 +172,17 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
 
     # Create test execution description
     report_description = create_report_description(passed_tests + failed_tests, end_time_normal)
+
+    # Next 2 loops are here to collect all the data (stack trace and duration) 
+    # from parameterized tests (and also from normal tests)
+    for test in passed_tests:
+        test_key = test_keys[test.nodeid]
+        tests_info[test_key].duration += test.duration
+
+    for test in failed_tests:
+        test_key = test_keys[test.nodeid]
+        tests_info[test_key].duration += test.duration
+        tests_info[test_key].stack_trace += str(test.longrepr) + '\n-----------------------------\n'
 
     # TODO: treba razresiti parametrizovane testove
     # ako ih ima u obe liste treba ukloniti one iz passed_tests

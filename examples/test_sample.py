@@ -1,4 +1,5 @@
 import pytest
+import time
 
 def inc(x):
     return x + 1
@@ -28,6 +29,7 @@ def test_answer2():
 @pytest.mark.xray_test_id('DIP-35')
 @pytest.mark.parametrize('value', [4, 5, 6, 7])
 def test_gt5(value):
+    time.sleep(1)
     assert gt5(value)
 
 
